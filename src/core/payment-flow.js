@@ -1,4 +1,21 @@
 /* Spike payment flow: orders are created first; transfer receipts are uploaded from My Orders. */
+
+/* Checkout never asks for the transfer receipt anymore. The customer creates the order first,
+   then uploads the receipt from My Orders. */
+checkout=function(){
+  const cart=state.remoteCart;const cur=cart?.currency_code||'USD';
+  const subtotal=Number(cart?.subtotal??0),platformTotal=Number(cart?.total??subtotal);
+  const temp=state.temporaryDelivery;const delivery=Number(temp?.delivery_total||0);const grand=platformTotal+delivery;
+  const transfer=state.payment==='transfer';
+  return `<section class="screen">${simpleHead('تأكيد الطلب والدفع')}<div class="page-wrap forms">
+    <button class="delivery-address" data-action="open-addresses"><span>${icon('map-pin',20)}</span><b>${state.activeAddress?`${esc(state.activeAddress.label)} - ${esc(state.activeAddress.area)}`:'اختر عنوان التوصيل'}</b><u>تغيير</u></button>
+    <div class="menu-row">${icon('truck',18)} <span>مكتب التوصيل محدد لكل منتج من التاجر</span><b>${delivery?liveMoney(delivery,cur):''}</b></div>
+    <div style="font-size:12px;margin:14px 5px 0">طريقة الدفع</div><div class="radio-row"><label><input type="radio" name="pay" value="transfer" ${transfer?'checked':''}> حوالة مالية</label><label><input type="radio" name="pay" value="cod" ${state.payment==='cod'?'checked':''}> أثناء التوصيل</label></div>
+    ${transfer?'<div class="spike-inline-note" style="margin-top:12px">بعد إنشاء الطلب ستتمكن من رفع سند الحوالة من صفحة طلباتي لتأكيده ومراجعته من الإدارة.</div>':''}
+    <div class="shopping-invoice"><div class="invoice-line"><span>المنتجات بعد الخصومات</span><b>${liveMoney(platformTotal,cur)}</b></div><div class="invoice-line"><span>رسوم مكتب التوصيل</span><b>${delivery?liveMoney(delivery,cur):'تحسب عند التأكيد'}</b></div><div class="invoice-total"><span>الإجمالي مع التوصيل</span><strong>${liveMoney(grand,cur)}</strong></div></div>
+    <button class="red-action full" data-action="pay">تأكيد الطلب</button></div></section>${bottom('cart')}`
+}
+
 async function completeRemoteCart(){
   const cart=await ensureRemoteCart();
   const cartId=cart.id;
