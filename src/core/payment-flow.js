@@ -1,19 +1,40 @@
 /* Spike payment flow: orders are created first; transfer receipts are uploaded from My Orders. */
 
-/* Checkout never asks for the transfer receipt anymore. The customer creates the order first,
-   then uploads the receipt from My Orders. */
+/* Force offline checkout methods to use a manual/system provider. Never fall back to a card gateway. */
+selectPaymentProvider=function(providers){
+  const rows=Array.isArray(providers)?providers:[];
+  const wanted=state.payment==='cod'?['cod','cash','manual','system']:['transfer','bank','manual','system'];
+  const score=p=>{const id=String(p?.id||p?.provider_id||'').toLowerCase();let s=-1;wanted.forEach((k,i)=>{if(id.includes(k)&&s<0)s=i});return s};
+  const matches=rows.map(p=>({p,s:score(p)})).filter(x=>x.s>=0).sort((a,b)=>a.s-b.s);
+  if(!matches.length)throw new Error(state.payment==='cod'?'لا توجد طريقة دفع عند الاستلام مفعلة في النظام':'لا توجد طريقة تحويل مالي/دفع يدوي مفعلة في النظام');
+  return matches[0].p;
+};
+
+/* Checkout shows transfer account details, but receipt upload happens only after the order is created. */
 checkout=function(){
   const cart=state.remoteCart;const cur=cart?.currency_code||'USD';
   const subtotal=Number(cart?.subtotal??0),platformTotal=Number(cart?.total??subtotal);
   const temp=state.temporaryDelivery;const delivery=Number(temp?.delivery_total||0);const grand=platformTotal+delivery;
   const transfer=state.payment==='transfer';
+  const accounts=(state.spikeContent?.bank_accounts||[]).filter(a=>a?.enabled!==false);
+  const accountsHtml=transfer?`<div class="transfer-panel"><h3>بيانات التحويل</h3>${accounts.length?accounts.map(a=>`<div class="bank-account-card"><strong>${esc(a.name||'تحويل مالي')}</strong><span>${esc(a.account_name||'')}</span><b dir="ltr">${esc(a.account_number||'')}</b>${a.instructions?`<small>${esc(a.instructions)}</small>`:''}</div>`).join(''):'<div class="empty-ux">لا توجد بيانات حساب مضافة من الإدارة.</div>'}<div class="spike-inline-note" style="margin-top:10px">بعد إنشاء الطلب سترفع سند الحوالة من صفحة طلباتي.</div></div>`:'';
   return `<section class="screen">${simpleHead('تأكيد الطلب والدفع')}<div class="page-wrap forms">
     <button class="delivery-address" data-action="open-addresses"><span>${icon('map-pin',20)}</span><b>${state.activeAddress?`${esc(state.activeAddress.label)} - ${esc(state.activeAddress.area)}`:'اختر عنوان التوصيل'}</b><u>تغيير</u></button>
     <div class="menu-row">${icon('truck',18)} <span>مكتب التوصيل محدد لكل منتج من التاجر</span><b>${delivery?liveMoney(delivery,cur):''}</b></div>
     <div style="font-size:12px;margin:14px 5px 0">طريقة الدفع</div><div class="radio-row"><label><input type="radio" name="pay" value="transfer" ${transfer?'checked':''}> حوالة مالية</label><label><input type="radio" name="pay" value="cod" ${state.payment==='cod'?'checked':''}> أثناء التوصيل</label></div>
-    ${transfer?'<div class="spike-inline-note" style="margin-top:12px">بعد إنشاء الطلب ستتمكن من رفع سند الحوالة من صفحة طلباتي لتأكيده ومراجعته من الإدارة.</div>':''}
+    ${accountsHtml}
     <div class="shopping-invoice"><div class="invoice-line"><span>المنتجات بعد الخصومات</span><b>${liveMoney(platformTotal,cur)}</b></div><div class="invoice-line"><span>رسوم مكتب التوصيل</span><b>${delivery?liveMoney(delivery,cur):'تحسب عند التأكيد'}</b></div><div class="invoice-total"><span>الإجمالي مع التوصيل</span><strong>${liveMoney(grand,cur)}</strong></div></div>
     <button class="red-action full" data-action="pay">تأكيد الطلب</button></div></section>${bottom('cart')}`
+}
+
+function checkoutCompletionError(d){
+  const e=d?.error;
+  if(typeof e==='string'&&e.trim())return e;
+  if(e?.message)return e.message;
+  if(d?.message)return d.message;
+  const errors=d?.errors||d?.cart?.errors;
+  if(Array.isArray(errors)&&errors.length)return errors.map(x=>x?.message||String(x)).join(' — ');
+  return 'تعذر إكمال الطلب بعد تهيئة الشحن والدفع';
 }
 
 async function completeRemoteCart(){
@@ -25,21 +46,32 @@ async function completeRemoteCart(){
   try{
     await prepareRemoteCheckout();
     const paymentMethod=state.payment==='cod'?'cod':'transfer';
-    await apiOptional(`/store/carts/${cartId}`,{method:'POST',body:{metadata:{...(state.remoteCart?.metadata||{}),spike_idempotency_key:idem,spike_payment_method:paymentMethod,spike_payment_review:'pending'}}});
+    await apiRequest(`/store/carts/${cartId}`,{method:'POST',body:{metadata:{...(state.remoteCart?.metadata||{}),spike_idempotency_key:idem,spike_payment_method:paymentMethod,spike_payment_review:'pending'}}});
     const d=await apiRequest(`/store/carts/${cartId}/complete`,{method:'POST'});
-    if(d.type==='order'||d.order){
+    if(d?.type==='order'||d?.order){
       const order=d.order||d;
       state.lastPlacedPaymentMethod=paymentMethod;
       await apiOptional('/store/spike/order-payment-state',{method:'POST',auth:true,body:{order_id:order.id,payment_method:paymentMethod}});
       return finalizeCompletedCheckout(order,cartId,idemKey);
     }
-    throw new Error(d.error?.message||'تعذر إكمال الطلب بعد تهيئة الشحن والدفع');
+    /* Some Mercur/Medusa responses complete the cart but don't return the order shape immediately. */
+    const recovered=await recoverCompletedCartOrder(cartId).catch(()=>null);
+    if(recovered){
+      state.lastPlacedPaymentMethod=paymentMethod;
+      await apiOptional('/store/spike/order-payment-state',{method:'POST',auth:true,body:{order_id:recovered.id,payment_method:paymentMethod}});
+      return finalizeCompletedCheckout(recovered,cartId,idemKey);
+    }
+    console.error('[Spike complete cart response]',d);
+    throw new Error(checkoutCompletionError(d));
   }catch(error){
     if(isCompletedCartError(error)){
       const existing=await recoverCompletedCartOrder(cartId).catch(()=>null);
-      if(existing)return finalizeCompletedCheckout(existing,cartId,idemKey);
+      if(existing){
+        state.lastPlacedPaymentMethod=state.payment==='cod'?'cod':'transfer';
+        return finalizeCompletedCheckout(existing,cartId,idemKey);
+      }
       storageSet(idemKey,'');setRemoteCartId('');state.remoteCart=null;
-      throw new Error('تم إكمال هذه السلة مسبقًا. حدّث الطلبات قبل إعادة المحاولة حتى لا يتم إنشاء طلب مكرر.');
+      throw new Error('تم إكمال هذه السلة مسبقًا ولم أجد الطلب المرتبط بها. تم تنظيف السلة القديمة، أعد إضافة المنتجات مرة واحدة.');
     }
     throw error;
   }
