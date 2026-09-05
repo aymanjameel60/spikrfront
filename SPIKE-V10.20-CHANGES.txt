@@ -1,0 +1,5 @@
+Spike storefront v10.20
+- Fixed repeated checkout failure when the current Mercur cart is already completed.
+- Recovers the existing order by cart_id when possible and clears stale completed cart ids safely.
+- Added a final customer UI consistency layer for buttons, fields, cards and tabs.
+- JavaScript syntax check passed.

@@ -1,0 +1,6 @@
+Spike v10.7 frontend-only
+- Fixes double currency conversion outside product cards.
+- Product details, variants, cart and checkout use Mercur native currency amounts.
+- Cart totals use remote Medusa cart totals when available.
+- Checkout tries address -> cheapest shipping -> payment collection -> payment session -> complete.
+- No backend files included.

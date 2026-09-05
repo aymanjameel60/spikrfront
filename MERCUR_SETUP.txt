@@ -1,0 +1,72 @@
+SPIKE v20 — Mercur full Store API integration
+=============================================
+
+1) Mercur backend
+-----------------
+Run only one backend instance:
+
+cd "C:\Users\jamee\Downloads\storm\mercur\templates\basic\packages\api"
+bun run dev
+
+Backend: http://localhost:9000
+Admin:   http://localhost:9000/dashboard
+Vendor:  http://localhost:9000/seller
+
+2) Required CORS (.env)
+-----------------------
+Because Spike runs on port 5500, include it in BOTH Store and Auth CORS:
+
+STORE_CORS=http://localhost:5500,http://localhost:8000,https://docs.medusajs.com
+AUTH_CORS=http://localhost:5500,http://localhost:7000,http://localhost:7001,http://localhost:9000
+
+Keep your other .env values as they are, including DATABASE_URL and REDIS_URL.
+After changing .env, stop Mercur with Ctrl+C and run bun run dev again.
+
+3) Run Spike
+------------
+Open a second PowerShell in this extracted folder:
+
+py -m http.server 5500
+
+Open:
+http://localhost:5500
+
+4) Publishable API Key
+----------------------
+Spike remembers the key in localStorage. If the status bar asks for a key:
+Admin > Settings > Publishable API Keys > Copy API key
+Then click the Mercur status bar in Spike and paste the full pk_... value.
+
+LIVE CONNECTIONS INCLUDED IN v20
+--------------------------------
+- Products
+- Product images
+- Variants/options
+- Calculated pricing
+- Inventory quantity
+- Product categories
+- Collections
+- Product tags (loaded for filtering/data use)
+- Regions
+- Currencies
+- Seller/store discovery where exposed by the installed Mercur version
+- Offers where GET /store/offers exists; gracefully falls back on older Mercur versions
+- Product reviews / ratings
+- Customer email/password login
+- Customer registration
+- Customer profile
+- Customer addresses
+- Wishlist (authenticated customers)
+- Remote Mercur cart
+- Add/update/remove cart line items
+- Shipping option discovery
+- Customer order history
+- Complete-cart call
+
+IMPORTANT ABOUT CHECKOUT
+------------------------
+The UI is connected to Mercur's cart/checkout APIs. A real completed order still requires the backend to have valid shipping and payment providers configured for the selected region. Spike's requested COD/manual-transfer methods are platform customizations we still need to implement in Mercur if they are not already configured as providers.
+
+COMPATIBILITY
+-------------
+Mercur has changed its marketplace model across versions. v20 probes optional marketplace endpoints (sellers/offers/wishlist/reviews) and falls back safely if a route doesn't exist, while keeping Medusa core Store API features live.

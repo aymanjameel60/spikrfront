@@ -1,0 +1,7 @@
+Spike frontend v10.5 fixes
+- Mercur product prices/offer_id come from /store/products computed variant fields
+- /store/offers no longer uses invalid legacy fields
+- cart line items always use offer_id (Mercur requirement)
+- checkout requires customer login and returns to checkout after login
+- guest review request suppressed
+- broken product images fall back to placeholder

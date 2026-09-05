@@ -1,0 +1,20 @@
+/* Product card gallery + price layout */
+.product-card .sale{
+  direction:rtl;
+  display:flex;
+  align-items:baseline;
+  justify-content:flex-start;
+  gap:10px;
+  text-align:right;
+}
+.product-card .sale-price{font:700 14px Arial;color:var(--text)}
+.product-card .old{font:700 9px Arial;color:var(--red);text-decoration:line-through;opacity:.9}
+.card-gallery{touch-action:pan-y;cursor:grab;user-select:none;-webkit-user-drag:none}
+.card-gallery.is-dragging{cursor:grabbing}
+.card-gallery.is-dragging .card-gallery-img{transition:none}
+.card-gallery-img{transition:opacity .15s ease,transform .18s ease}
+.card-gallery.is-changing .card-gallery-img{opacity:.35;transform:scale(.985)}
+.card-gallery-dots{position:absolute;z-index:3;bottom:8px;left:50%;transform:translateX(-50%);display:flex;gap:4px;direction:ltr}
+.card-gallery-dots i{width:5px;height:5px;border-radius:50%;background:#d1d1d1;transition:.15s}
+.card-gallery-dots i.active{width:12px;border-radius:5px;background:#222}
+@media (hover:none){.card-gallery-dots{bottom:7px}}
