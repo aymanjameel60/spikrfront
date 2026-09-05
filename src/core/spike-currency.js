@@ -21,6 +21,13 @@ function spikeFormat(amount,c){
   const decimals=(String(cur.code).includes('YER')||rate>=100)?0:2;
   return `${n.toLocaleString('en-US',{minimumFractionDigits:decimals,maximumFractionDigits:decimals})} ${cur.symbol||cur.code}`;
 }
+
+/* Display currency must never switch Medusa regions. Product/source pricing stays on the USD/base region. */
+fetchMercurRegion=async function(){
+  const regions=state.liveRegions?.length?state.liveRegions:await fetchMercurRegions();
+  return regions.find(r=>String(r.currency_code||'').toUpperCase()==='USD')||regions[0]||null;
+};
+
 apiMoneyString=function(amount,sourceCurrency='USD'){
   const target=spikeSelectedCurrency();
   return spikeFormat(spikeConvert(amount,sourceCurrency,target.code),target);
@@ -47,6 +54,7 @@ document.addEventListener('click',e=>{
   if(action==='close-currency'){state.currencySheet=false;render();}
   if(action==='spike-currency-select'){
     const code=String(el.dataset.value||'USD').toUpperCase();
+    if(!spikeCurrency(code))return;
     state.settings={...state.settings,currency:code};
     state.settingsDraft=state.settingsDraft?{...state.settingsDraft,currency:code}:state.settingsDraft;
     try{localStorage.setItem('storm-settings',JSON.stringify(state.settings))}catch(_){ }
