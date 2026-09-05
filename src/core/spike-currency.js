@@ -35,6 +35,10 @@ async function refreshSpikeCurrencies(){
   }catch(_){return spikeCurrencies()}
 }
 
+/* Currency sheets are closed by default and only opened by an explicit user action. */
+state.currencySheet=false;
+state.settingsCurrencySheet=false;
+
 /* Display currency never switches Medusa regions; product source prices remain on the base/USD region. */
 fetchMercurRegion=async function(){
   const regions=state.liveRegions?.length?state.liveRegions:await fetchMercurRegions();
@@ -57,11 +61,13 @@ function spikeCurrencyRows(selectedCode,action){
   return rows.map(c=>`<button class="currency-option spike-currency-option ${String(selectedCode)===String(c.code)?'selected':''}" data-action="${action}" data-value="${esc(c.code)}"><span class="currency-option-main"><strong>${esc(c.name||c.code)}</strong><small>1 USD = ${Number(c.rate_to_usd).toLocaleString('en-US')} ${esc(c.symbol||c.name||c.code)}</small></span><span class="currency-option-side"><em>${esc(c.symbol||c.name||c.code)}</em><b class="settings-radio"></b></span></button>`).join('');
 }
 settingsCurrencySheet=function(draft,isArabic){
-  return `<div class="shade ${state.settingsCurrencySheet?'show':''}" data-action="currency-sheet-close"></div><div class="settings-bottom-sheet spike-currency-sheet ${state.settingsCurrencySheet?'show':''}"><div class="sheet-handle"></div><div class="settings-sheet-head"><div><h3>${isArabic?'اختر العملة':'Choose currency'}</h3><p>${isArabic?'العملات المفعلة من لوحة التحكم':'Currencies enabled by admin'}</p></div><button class="sheet-close-btn icon-button" data-action="currency-sheet-close">${icon('x',20)}</button></div><div class="currency-list">${spikeCurrencyRows(draft.currency,'settings-currency')}</div></div>`;
+  if(!state.settingsCurrencySheet)return '';
+  return `<div class="shade show" data-action="currency-sheet-close"></div><div class="settings-bottom-sheet spike-currency-sheet show"><div class="sheet-handle"></div><div class="settings-sheet-head"><div><h3>${isArabic?'اختر العملة':'Choose currency'}</h3><p>${isArabic?'العملات المفعلة من لوحة التحكم':'Currencies enabled by admin'}</p></div><button class="sheet-close-btn icon-button" data-action="currency-sheet-close">${icon('x',20)}</button></div><div class="currency-list">${spikeCurrencyRows(draft.currency,'settings-currency')}</div></div>`;
 };
 currencySheet=function(){
+  if(!state.currencySheet)return '';
   const selected=spikeSelectedCurrency();
-  return `<div class="shade ${state.currencySheet?'show':''}" data-action="close-currency"></div><div class="settings-bottom-sheet spike-currency-sheet ${state.currencySheet?'show':''}"><div class="sheet-handle"></div><div class="settings-sheet-head"><div><h3>اختر العملة</h3><p>سيتم تحديث جميع الأسعار مباشرة</p></div><button class="sheet-close-btn icon-button" data-action="close-currency">${icon('x',20)}</button></div><div class="currency-list">${spikeCurrencyRows(selected.code,'spike-currency-select')}</div></div>`;
+  return `<div class="shade show" data-action="close-currency"></div><div class="settings-bottom-sheet spike-currency-sheet show"><div class="sheet-handle"></div><div class="settings-sheet-head"><div><h3>اختر العملة</h3><p>سيتم تحديث جميع الأسعار مباشرة</p></div><button class="sheet-close-btn icon-button" data-action="close-currency">${icon('x',20)}</button></div><div class="currency-list">${spikeCurrencyRows(selected.code,'spike-currency-select')}</div></div>`;
 };
 
 document.addEventListener('click',async e=>{
@@ -69,12 +75,15 @@ document.addEventListener('click',async e=>{
   const action=el.dataset.action;
   if(action==='open-currency'||action==='currency'){
     state.currencySheet=true;render();
-    await refreshSpikeCurrencies();render();
+    await refreshSpikeCurrencies();
+    if(state.currencySheet)render();
   }
   if(action==='currency-sheet'){
+    state.settingsCurrencySheet=true;
     await refreshSpikeCurrencies();
     if(state.settingsCurrencySheet)render();
   }
+  if(action==='currency-sheet-close'){state.settingsCurrencySheet=false;render();}
   if(action==='close-currency'){state.currencySheet=false;render();}
   if(action==='spike-currency-select'){
     const code=String(el.dataset.value||'').toUpperCase();
