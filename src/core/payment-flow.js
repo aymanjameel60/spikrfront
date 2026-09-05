@@ -13,6 +13,7 @@ async function completeRemoteCart(){
     if(d.type==='order'||d.order){
       const order=d.order||d;
       state.lastPlacedPaymentMethod=paymentMethod;
+      await apiOptional('/store/spike/order-payment-state',{method:'POST',auth:true,body:{order_id:order.id,payment_method:paymentMethod}});
       return finalizeCompletedCheckout(order,cartId,idemKey);
     }
     throw new Error(d.error?.message||'تعذر إكمال الطلب بعد تهيئة الشحن والدفع');
