@@ -8,6 +8,10 @@ function offerDiscountPercent(p){
   if(!original||!current||original<=current)return 0;
   return Math.round(((original-current)/original)*100);
 }
+function offerSignature(p){const {current,original}=offerPrices(p);return `${p.id}:${original}:${current}`}
+function unseenOfferSignatures(){const current=spikeDiscountProducts().map(offerSignature);try{const seen=new Set(JSON.parse(localStorage.getItem('spike-offers-seen-signatures')||'[]'));return new Set(current.filter(x=>!seen.has(x)))}catch(_){return new Set(current)}}
+function markCurrentOffersSeen(){try{localStorage.setItem('spike-offers-seen-signatures',JSON.stringify(spikeDiscountProducts().map(offerSignature)))}catch(_){}}
+window.markCurrentOffersSeen=markCurrentOffersSeen;
 
 function offerSort(list){
   const mode=state.offersSort||'discount_desc';
@@ -24,14 +28,15 @@ function spikeDiscountProducts(){return products.filter(p=>offerDiscountPercent(
 window.spikeDiscountProducts=spikeDiscountProducts;
 
 function offers(){
-  let list=spikeDiscountProducts();
+  const unseen=unseenOfferSignatures();let list=spikeDiscountProducts();
   if(state.offersDiscount>0)list=list.filter(p=>offerDiscountPercent(p)>=state.offersDiscount);
   if(state.offersPrice==='under5')list=list.filter(p=>offerPrices(p).current<5);
   if(state.offersPrice==='5to25')list=list.filter(p=>offerPrices(p).current>=5&&offerPrices(p).current<=25);
   if(state.offersPrice==='over25')list=list.filter(p=>offerPrices(p).current>25);
   if(state.offersRating>0)list=list.filter(p=>Number(p.rating)>=state.offersRating);
-  list=offerSort(list);
-  return `<section class="screen">${simpleHead('العروض والخصومات',{sortAction:'offers-filter',sortLabel:'فلترة وترتيب',sortIcon:'⌯'})}<div class="page-wrap"><div class="product-grid">${list.map(card).join('')}</div>${!list.length?'<div class="empty-ux">لا توجد عروض فعالة حالياً</div>':''}</div>${offersFilterSheet()}</section>${bottom('offers')}`
+  list=offerSort(list).map(p=>({...p,isNewDiscount:unseen.has(offerSignature(p))}));
+  setTimeout(markCurrentOffersSeen,0);
+  return `<section class="screen">${simpleHead('العروض والخصومات',{sortAction:'offers-filter',sortLabel:'فلترة وترتيب',sortIcon:'⌯'})}<div class="page-wrap">${unseen.size?`<div class="offers-new-note">${unseen.size} عرض جديد</div>`:''}<div class="product-grid">${list.map(card).join('')}</div>${!list.length?`<div class="empty-state rich-empty">${icon('badge-percent',34)}<strong>لا توجد عروض فعالة حالياً</strong><span>سنظهر الخصومات هنا فور إضافتها.</span><button class="red-action" data-nav="home">تصفح المنتجات</button></div>`:''}</div>${offersFilterSheet()}</section>${bottom('offers')}`
 }
 
 function offersFilterSheet(){
