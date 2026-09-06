@@ -1,31 +1,12 @@
-/* Final Spike runtime compatibility: direct customer catalog from Spike API only. */
+/* Spike runtime compatibility: direct customer catalog from Spike API only. */
 (function(){
-  const API='http://localhost:9100/api/v1',HOST='http://localhost:9100';
-  const abs=v=>String(v||'').startsWith('/uploads/')?HOST+v:(v||'');
+  const API='http://localhost:9100/api/v1';
+  const abs=v=>{const s=String(v||'');if(s.startsWith('/uploads/'))return API+s;if(s.startsWith('uploads/'))return API+'/'+s;return s};
   async function get(path){const r=await fetch(API+path,{headers:{accept:'application/json'}});const text=await r.text();let d={};try{d=text?JSON.parse(text):{}}catch{}if(!r.ok)throw new Error(d.message||`${path}: HTTP ${r.status}`);return d}
-  function mapProduct(p){
-    const variants=(p.variants||[]).map(v=>({id:v.id,title:v.title||'Default',sku:v.sku||'',stock:Number(v.stock||0),priceNumeric:Number(v.price_usd||0),originalNumeric:null,currency:'USD',price:apiMoneyString(Number(v.price_usd||0),'USD'),old:null,options:v.options||{},raw:v}));
-    const first=variants[0]||{id:null,stock:0,priceNumeric:0,currency:'USD'};
-    const images=(p.images||[]).map(x=>abs(x?.url||x)).filter(Boolean);
-    return {id:p.id,name:p.name||'منتج',price:apiMoneyString(first.priceNumeric,'USD'),priceNumeric:first.priceNumeric,old:undefined,rating:String(p.review_average||0),img:images[0]||'',images,store:p.store_name||'Spike',storeId:p.store_id||null,category:p.category_name||'غير مصنف',categoryId:p.category_id||null,categories:p.category_name?[p.category_name]:[],description:p.description||'',inventory:first.stock,variants,selectedVariantId:first.id,currency:'USD',returnable:!!p.returnable,spike:true,raw:p};
-  }
+  function mapProduct(p){const variants=(p.variants||[]).map(v=>({id:v.id,title:v.title||'Default',sku:v.sku||'',stock:Number(v.stock||0),priceNumeric:Number(v.price_usd||0),originalNumeric:null,currency:'USD',price:apiMoneyString(Number(v.price_usd||0),'USD'),old:null,options:v.options||{},raw:v}));const first=variants[0]||{id:null,stock:0,priceNumeric:0,currency:'USD'};const images=(p.images||[]).map(x=>abs(x?.url||x)).filter(Boolean);return {id:p.id,name:p.name||'منتج',price:apiMoneyString(first.priceNumeric,'USD'),priceNumeric:first.priceNumeric,old:undefined,rating:String(p.review_average||0),img:images[0]||'',images,store:p.store_name||'Spike',storeId:p.store_id||null,category:p.category_name||'غير مصنف',categoryId:p.category_id||null,categories:p.category_name?[p.category_name]:[],description:p.description||'',inventory:first.stock,variants,selectedVariantId:first.id,currency:'USD',returnable:!!p.returnable,spike:true,raw:p}}
   function mapStore(s,mapped){return {id:s.id,name:s.name,handle:s.slug||'',rating:'0.0',reviews:0,category:'عام',banner:'',logo:s.logo_url?abs(s.logo_url):null,logoText:String(s.name||'STORE').slice(0,8),products:mapped.filter(p=>p.storeId===s.id).map(p=>p.id),raw:s}}
-  async function refresh(){
-    state.backend={status:'loading',message:'جاري الاتصال بـ Spike'};if(typeof render==='function')render();
-    try{
-      const [pd,sd]=await Promise.all([get('/products'),get('/stores')]);
-      const mapped=(pd.products||[]).map(mapProduct);
-      products.splice(0,products.length,...mapped);
-      const stores=(sd.stores||[]).map(s=>mapStore(s,mapped));
-      storesData.splice(0,storesData.length,...stores);state.liveSellers=stores;
-      try{const curd=await get('/currencies');state.liveCurrencies=curd.currencies||[];state.spikeContent=state.spikeContent||{};state.spikeContent.currencies=state.liveCurrencies.map(c=>({...c,rate_to_usd:Number(c.rate_from_usd||1)}))}catch(e){console.warn('Spike currencies',e)}
-      try{const setd=await get('/settings/public');state.spikeContent=state.spikeContent||{};state.spikeContent.default_currency=String(setd.default_currency_code||'USD').toUpperCase()}catch(e){console.warn('Spike settings',e)}
-      try{await window.refreshSpikeContent?.()}catch(e){console.warn('Spike content',e)}
-      state.backend={status:'connected',message:`Spike • ${products.length} منتج • ${storesData.length} متجر`};
-    }catch(e){console.error('Spike catalog direct load',e);state.backend={status:'error',message:`Spike — ${e.message||'تعذر تحميل البيانات'}`}}
-    if(typeof render==='function')render();
-  }
-  window.syncMercurAll=refresh;window.syncMercurProducts=refresh;window.refreshSpikeCatalog=refresh;
+  async function refresh(){state.backend={status:'loading',message:'جاري الاتصال بـ Spike'};if(typeof render==='function')render();try{const [pd,sd]=await Promise.all([get('/products'),get('/stores')]);const mapped=(pd.products||[]).map(mapProduct);products.splice(0,products.length,...mapped);const stores=(sd.stores||[]).map(s=>mapStore(s,mapped));storesData.splice(0,storesData.length,...stores);state.liveSellers=stores;try{const curd=await get('/currencies');state.liveCurrencies=curd.currencies||[];state.spikeContent=state.spikeContent||{};state.spikeContent.currencies=state.liveCurrencies.map(c=>({...c,rate_to_usd:Number(c.rate_from_usd||1)}))}catch(e){console.warn('Spike currencies',e)}try{const setd=await get('/settings/public');state.spikeContent=state.spikeContent||{};state.spikeContent.default_currency=String(setd.default_currency_code||'USD').toUpperCase()}catch(e){console.warn('Spike settings',e)}try{await window.refreshSpikeContent?.()}catch(e){console.warn('Spike content',e)}state.backend={status:'connected',message:`Spike • ${products.length} منتج • ${storesData.length} متجر`}}catch(e){console.error('Spike catalog direct load',e);state.backend={status:'error',message:`Spike — ${e.message||'تعذر تحميل البيانات'}`}}if(typeof render==='function')render()}
+  window.refreshSpikeCatalog=refresh;
   window.backendStatusChip=function(){const b=state.backend||{status:'loading',message:'جاري الاتصال بـ Spike'};const cls=b.status==='connected'?'connected':b.status==='loading'?'loading':'warning';return `<div class="backend-status-wrap"><button class="backend-status ${cls}" data-action="backend-refresh"><span></span><b>${esc(b.message||'Spike')}</b><small>${b.status==='connected'?'تحديث':'إعادة المحاولة'}</small></button></div>`};
   setTimeout(refresh,50);
 })();
