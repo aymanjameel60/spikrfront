@@ -21,9 +21,12 @@
     const variants=rawVariants.map(v=>{
       const current=num(v.price_usd,v.price,v.amount,v.current_price,v.sale_price);
       const original=num(v.original_price_usd,v.original_price,v.compare_at_price,v.list_price);
-      return {id:v.id,title:v.title||v.name||'Default',sku:v.sku||'',stock:Number(v.stock??v.inventory??v.quantity??0),priceNumeric:current,originalNumeric:original>current?original:0,currency:String(v.currency||v.currency_code||'USD').toUpperCase(),price:apiMoneyString(current,String(v.currency||v.currency_code||'USD').toUpperCase()),options:v.options||{},raw:v};
+      const currency=String(v.currency||v.currency_code||'USD').toUpperCase();
+      const hasDiscount=original>current&&current>0;
+      return {id:v.id,title:v.title||v.name||'Default',sku:v.sku||'',stock:Number(v.stock??v.inventory??v.quantity??0),priceNumeric:current,originalNumeric:hasDiscount?original:0,currency,price:apiMoneyString(current,currency),old:hasDiscount?apiMoneyString(original,currency):null,discountPercent:hasDiscount?Math.round(((original-current)/original)*100):Number(v.discount_percent||0),options:v.options||{},raw:v};
     });
     const first=variants.find(v=>v.priceNumeric>0)||variants[0]||{id:null,stock:Number(p.stock||0),priceNumeric:num(p.price_usd,p.price,p.amount),originalNumeric:num(p.original_price_usd,p.original_price,p.compare_at_price),currency:String(p.currency||p.currency_code||'USD').toUpperCase()};
+    const hasDiscount=Number(first.originalNumeric||0)>Number(first.priceNumeric||0)&&Number(first.priceNumeric||0)>0;
     const rawImages=Array.isArray(p.images)?p.images:[];
     const images=[...rawImages.map(x=>abs(x?.url||x?.image_url||x)),abs(p.image_url),abs(p.thumbnail_url),abs(p.thumbnail)].filter(Boolean);
     const storeObj=p.store||p.seller||{};
@@ -32,7 +35,7 @@
     const storeName=p.store_name||storeObj.name||p.seller_name||'Spike';
     const categoryId=p.category_id??categoryObj.id??null;
     const categoryName=p.category_name||categoryObj.name||'غير مصنف';
-    return {id:p.id,name:p.name||p.title||'منتج',price:apiMoneyString(first.priceNumeric,first.currency||'USD'),priceNumeric:first.priceNumeric,originalNumeric:first.originalNumeric||0,rating:String(p.review_average??p.rating??0),review_average:Number(p.review_average??p.rating??0),review_count:Number(p.review_count??p.reviews_count??0),img:images[0]||'',images,store:storeName,storeId,category:categoryName,categoryId,categories:categoryName?[categoryName]:[],description:p.description||'',inventory:first.stock,variants,selectedVariantId:first.id,currency:first.currency||'USD',returnable:!!p.returnable,spike:true,raw:p};
+    return {id:p.id,name:p.name||p.title||'منتج',price:apiMoneyString(first.priceNumeric,first.currency||'USD'),priceNumeric:first.priceNumeric,originalNumeric:hasDiscount?first.originalNumeric:0,old:hasDiscount?apiMoneyString(first.originalNumeric,first.currency||'USD'):null,discountPercent:hasDiscount?Math.round(((first.originalNumeric-first.priceNumeric)/first.originalNumeric)*100):Number(first.discountPercent||0),rating:String(p.review_average??p.rating??0),review_average:Number(p.review_average??p.rating??0),review_count:Number(p.review_count??p.reviews_count??0),img:images[0]||'',images,store:storeName,storeId,category:categoryName,categoryId,categories:categoryName?[categoryName]:[],description:p.description||'',inventory:first.stock,variants,selectedVariantId:first.id,currency:first.currency||'USD',returnable:!!p.returnable,spike:true,raw:p};
   }
   function category(c){return {...c,id:c.id,name:c.name||c.title||'قسم',image_url:abs(c.image_url||c.image||c.thumbnail),enabled:c.enabled!==false};}
   function store(s,mapped){
