@@ -1,7 +1,7 @@
 /* Spike content from custom backend: banners, categories, collections, home sections. */
 (function(){
   const API='http://localhost:9100/api/v1',HOST='http://localhost:9100';
-  const abs=v=>String(v||'').startsWith('/uploads/')?HOST+v:(v||'');
+  const abs=v=>String(v||'').startsWith('/uploads/')?API+v:(v||'');
   function banner(b){return{...b,enabled:b.enabled!==false,action_type:b.target_type||'none',target:b.target_type==='internal'?(b.target_url||''):(b.target_id||''),image_url:abs(b.image_url)}}
   function category(c){return{...c,image_url:abs(c.image_url)}}
   function collection(c){return{...c,image_url:abs(c.image_url)}}
