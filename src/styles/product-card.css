@@ -17,4 +17,5 @@
 .card-gallery-dots{position:absolute;z-index:3;bottom:8px;left:50%;transform:translateX(-50%);display:flex;gap:4px;direction:ltr}
 .card-gallery-dots i{width:5px;height:5px;border-radius:50%;background:#d1d1d1;transition:.15s}
 .card-gallery-dots i.active{width:12px;border-radius:5px;background:#222}
+.new-discount-badge{position:absolute;z-index:4;top:10px;right:10px;background:#111;color:#fff;border-radius:999px;padding:4px 7px;font-size:8px;font-weight:800;line-height:1}
 @media (hover:none){.card-gallery-dots{bottom:7px}}
