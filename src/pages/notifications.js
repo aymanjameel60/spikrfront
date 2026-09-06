@@ -1,56 +1,8 @@
 function notificationsPage(){
-  const visible = state.notificationFilter === 'unread'
-    ? state.notifications.filter(n => !n.read)
-    : state.notifications;
-
-  return `
-    <section class="screen notifications-screen">
-      ${simpleHead('الإشعارات')}
-
-      <div class="page-wrap notifications-page">
-        <div class="notifications-toolbar">
-          <div class="notification-tabs">
-            <button class="notification-tab ${state.notificationFilter === 'all' ? 'active' : ''}" data-action="notifications-all">الكل</button>
-            <button class="notification-tab ${state.notificationFilter === 'unread' ? 'active' : ''}" data-action="notifications-unread">غير المقروءة</button>
-          </div>
-
-          <button class="notifications-more" data-action="notification-menu" aria-label="خيارات الإشعارات">${icon('ellipsis',22)}</button>
-        </div>
-
-        ${state.notificationMenu ? `
-          <div class="notification-menu-card">
-            <button data-action="mark-all-read">تحديد الكل كمقروء</button>
-            <button data-action="clear-notifications" class="danger">مسح كل الإشعارات</button>
-          </div>
-        ` : ''}
-
-        <div class="notifications-list">
-          ${visible.length ? visible.map(n => `
-            <button class="notification-card ${n.read ? '' : 'unread'}" data-action="open-notification" data-id="${n.id}">
-              <div class="notification-icon ${n.type}">
-                ${icon(n.icon,24)}
-              </div>
-
-              <div class="notification-content">
-                <div class="notification-title-row">
-                  <strong>${n.title}</strong>
-                  ${n.read ? '' : '<span class="unread-dot" aria-label="غير مقروء"></span>'}
-                </div>
-                <p>${n.message}</p>
-                <time>${n.time}</time>
-              </div>
-            </button>
-          `).join('') : `
-            <div class="notifications-empty">
-              <div class="notifications-empty-icon">${icon('check',24)}</div>
-              <strong>لا توجد إشعارات هنا</strong>
-              <span>ستظهر تحديثات طلباتك وعروض المتجر في هذه الصفحة.</span>
-            </div>
-          `}
-        </div>
-      </div>
-    </section>
-
-    ${bottom('home')}
-  `;
+  const all=Array.isArray(state.notifications)?state.notifications:[];
+  const visible=state.notificationFilter==='unread'?all.filter(n=>!n.read):all;
+  const text=n=>esc(n.body||n.message||'');
+  const title=n=>esc(n.title||'إشعار');
+  const time=n=>{try{return new Date(n.created_at||n.time||Date.now()).toLocaleString('ar')}catch(_){return ''}};
+  return `<section class="screen notifications-screen">${simpleHead('الإشعارات')}<div class="page-wrap notifications-page"><div class="notifications-toolbar"><div class="notification-tabs"><button class="notification-tab ${state.notificationFilter==='all'?'active':''}" data-action="notifications-all">الكل</button><button class="notification-tab ${state.notificationFilter==='unread'?'active':''}" data-action="notifications-unread">غير المقروءة</button></div><button class="notifications-more" data-action="notification-menu" aria-label="خيارات الإشعارات">${icon('ellipsis',22)}</button></div>${state.notificationMenu?`<div class="notification-menu-card"><button data-action="mark-all-read">تحديد الكل كمقروء</button></div>`:''}<div class="notifications-list">${visible.length?visible.map(n=>`<button class="notification-card ${n.read?'':'unread'}" data-action="open-notification" data-id="${esc(n.id)}"><div class="notification-icon">${icon(n.data?.order_id?'package':'bell',24)}</div><div class="notification-content"><div class="notification-title-row"><strong>${title(n)}</strong>${n.read?'':'<span class="unread-dot" aria-label="غير مقروء"></span>'}</div><p>${text(n)}</p><time>${time(n)}</time></div></button>`).join(''):`<div class="notifications-empty"><div class="notifications-empty-icon">${icon('check',24)}</div><strong>لا توجد إشعارات هنا</strong><span>ستظهر تحديثات طلباتك ورسائل النظام في هذه الصفحة.</span></div>`}</div></div></section>${bottom('home')}`;
 }
