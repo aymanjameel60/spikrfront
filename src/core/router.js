@@ -52,7 +52,6 @@ function go(route,push=true){
   state.pendingPhone='';
   state.settingsCurrencySheet=false;
   state.currencySheet=false;
-  state.deleteAccountModal=false;
   render();
 }
 
@@ -78,22 +77,20 @@ app.addEventListener('click',async e=>{
     else if(a==='applyfilter'){state.filter=false;showToast('تم تطبيق الفلتر');render()}
     else if(a==='fav'){const id=act.dataset.id;const add=!state.favs.has(id);add?state.favs.add(id):state.favs.delete(id);render();if(customerToken()){try{await setRemoteWishlist(id,add)}catch(err){console.warn(err);showToast('المفضلة محلياً — تعذر مزامنتها الآن')}}}
     else if(a==='add'){const id=act.dataset.id;try{await addRemoteCartItem(id,1);showToast('تمت الإضافة إلى السلة');render()}catch(err){console.warn(err);showToast(err.message||'تعذر إضافة المنتج إلى السلة')}}
-    else if(a==='backend-connect'){const current=apiPublishableKey();const key=prompt('الصق Publishable API Key من Mercur Admin:',current);if(key&&key.trim()){setApiPublishableKey(key);syncMercurProducts()}}
-    else if(a==='backend-refresh'){syncMercurAll()}
     else if(a==='clearfavs'){state.favs.clear();render()}
-    else if(a==='cart-plus'){const id=act.dataset.id;const row=state.cartItems.find(x=>x.id===id);const q=(row?.qty||0)+1;try{await updateRemoteCartItem(id,q)}catch(_){changeCartQty(id,1)}render()}
-    else if(a==='cart-minus'){const id=act.dataset.id;const row=state.cartItems.find(x=>x.id===id);const q=(row?.qty||1)-1;try{await updateRemoteCartItem(id,q)}catch(_){changeCartQty(id,-1)}render()}
-    else if(a==='cart-remove'){const id=act.dataset.id;try{await updateRemoteCartItem(id,0)}catch(_){state.cartItems=state.cartItems.filter(x=>x.id!==id)}showToast('تم حذف المنتج');render()}
-    else if(a==='move-favorite'){state.favs.add(act.dataset.id);state.cartItems=state.cartItems.filter(x=>x.id!==act.dataset.id);showToast('تم حفظ المنتج في المفضلة');render()}
+    else if(a==='cart-plus'){const id=act.dataset.id;const row=state.cartItems.find(x=>x.id===id);const q=(row?.qty||0)+1;try{await updateRemoteCartItem(id,q);render()}catch(err){showToast(err.message||'تعذر تحديث الكمية')}}
+    else if(a==='cart-minus'){const id=act.dataset.id;const row=state.cartItems.find(x=>x.id===id);const q=(row?.qty||1)-1;try{await updateRemoteCartItem(id,q);render()}catch(err){showToast(err.message||'تعذر تحديث الكمية')}}
+    else if(a==='cart-remove'){const id=act.dataset.id;try{await updateRemoteCartItem(id,0);showToast('تم حذف المنتج');render()}catch(err){showToast(err.message||'تعذر حذف المنتج')}}
+    else if(a==='move-favorite'){const id=act.dataset.id;state.favs.add(id);try{await updateRemoteCartItem(id,0)}catch(err){showToast(err.message||'تعذر تحديث السلة');return}showToast('تم حفظ المنتج في المفضلة');render()}
     else if(a==='toggle-note'){state.noteOpen=!state.noteOpen;render()}
-    else if(a==='change-address')showToast('سيتم فتح اختيار العنوان');
+    else if(a==='change-address')go('addresses')
     else if(a==='apply-coupon'){const input=document.getElementById('coupon-code');const code=(input?.value||'').trim();try{act.disabled=true;await applyCouponCode(code);showToast('تم تطبيق الكوبون');render()}catch(err){act.disabled=false;showToast(err.message||'الكوبون غير صالح')}}
-    else if(a==='pay'){if(!customerToken()){state.afterLoginRoute='checkout';showToast('سجّل الدخول أولاً لإكمال الطلب');go('login');return}try{act.disabled=true;showToast('جاري إنشاء الطلب...');const order=await completeSpikeCheckout();showToast('تم إنشاء الطلب بنجاح');go('success')}catch(err){act.disabled=false;showToast(err.message||'تعذر إتمام الطلب')}}
+    else if(a==='pay'){if(!customerToken()){state.afterLoginRoute='checkout';showToast('سجّل الدخول أولاً لإكمال الطلب');go('login');return}try{act.disabled=true;showToast('جاري إنشاء الطلب...');await completeSpikeCheckout();showToast('تم إنشاء الطلب بنجاح');go('success')}catch(err){act.disabled=false;showToast(err.message||'تعذر إتمام الطلب')}}
     else if(a==='auth'){const email=(document.getElementById('auth-email')?.value||'').trim();const password=document.getElementById('auth-password')?.value||'';const mode=act.dataset.mode||'login';if(!email||!password){showToast('أدخل البريد وكلمة المرور');return}try{if(mode==='signup'){const name=(document.getElementById('auth-name')?.value||'').trim();const parts=name.split(/\s+/);await registerCustomer({email,password,first_name:parts.shift()||'',last_name:parts.join(' ')})}else await loginCustomer(email,password);showToast(mode==='signup'?'تم إنشاء الحساب':'تم تسجيل الدخول');const next=state.afterLoginRoute||'home';state.afterLoginRoute=null;go(next)}catch(err){showToast(err.message||'تعذر تسجيل الدخول')}}
     else if(a==='contact')showToast('تم اختيار وسيلة التواصل');
     else if(a==='currency'||a==='open-currency'){state.currencySheet=true;render()}
     else if(a==='close-currency'){state.currencySheet=false;render()}
-    else if(a==='select-home-currency'){state.settings.currency=act.dataset.value;state.currencySheet=false;try{localStorage.setItem('storm-settings',JSON.stringify(state.settings))}catch(e){}showToast('تم تغيير العملة');await syncMercurAll({silent:true});render()}
+    else if(a==='select-home-currency'){state.settings.currency=act.dataset.value;state.currencySheet=false;try{localStorage.setItem('storm-settings',JSON.stringify(state.settings))}catch(e){}try{if(customerToken())await SpikeCommerce.req('/cart/meta',{method:'PUT',auth:true,body:{currency_code:state.settings.currency}});await refreshSpikeCatalog()}catch(err){console.warn(err)}showToast('تم تغيير العملة');render()}
     else if(a==='open-addresses')go('addresses');
     else if(a==='select-address'){const addr=state.addresses.find(x=>x.id===act.dataset.id);if(addr){state.activeAddress=addr;showToast('تم تغيير عنوان التوصيل');go(state.history.pop()||'home',false)}}
     else if(a==='edit-address'){const addr=state.addresses.find(x=>x.id===act.dataset.id);state.editingAddressId=act.dataset.id;state.addressFormType=addr?.type||'home';state.addressFormDefault=state.activeAddress?.id===act.dataset.id;go('address-form')}
@@ -101,9 +98,8 @@ app.addEventListener('click',async e=>{
     else if(a==='address-type'){state.addressFormType=act.dataset.value;document.querySelectorAll('.address-type').forEach(x=>x.classList.toggle('active',x.dataset.value===state.addressFormType))}
     else if(a==='toggle-default-address'){state.addressFormDefault=!state.addressFormDefault;act.querySelector('.switch')?.classList.toggle('on',state.addressFormDefault)}
     else if(a==='cancel-address'){go(state.history.pop()||'addresses',false)}
-    else if(a==='use-current-location'){if(!navigator.geolocation){showToast('الموقع غير مدعوم على هذا الجهاز')}else navigator.geolocation.getCurrentPosition(pos=>{document.getElementById('address-lat').value=String(pos.coords.latitude);document.getElementById('address-lng').value=String(pos.coords.longitude);showToast('تم تحديد موقعك')},()=>showToast('تعذر الوصول للموقع'))}
     else if(a==='save-address'){saveAddressFromForm()}
-    else if(a==='banner-target'){const t=act.dataset.type,target=act.dataset.target;if(t==='product'){state.selectedProduct=target;go('product')}else if(t==='category'){const c=state.liveCategories?.find(x=>x.id===target);state.selectedCategory=c?.name||target;go('category-products')}else if(t==='collection'){state.collectionFilter=target;state.selectedCategory='الكل';go('category-products')}}
+    else if(a==='banner-target'){const t=act.dataset.type,target=act.dataset.target;if(t==='product'){state.selectedProduct=target;go('product:'+target)}else if(t==='category'){const c=state.liveCategories?.find(x=>x.id===target);state.selectedCategory=c?.name||target;go('category-products')}else if(t==='collection'){state.collectionFilter=target;state.selectedCategory='الكل';go('category-products')}}
     else if(a==='open-category'){state.selectedCategory=act.dataset.value||'الكل';go('category-products')}
     else if(a==='quick-category'){state.selectedCategory=act.dataset.value;render()}
     else if(a==='select-variant'){state.selectedVariant=act.dataset.value;render()}
@@ -111,8 +107,8 @@ app.addEventListener('click',async e=>{
     else if(a==='notifications-all'){state.notificationFilter='all';state.notificationMenu=false;render()}
     else if(a==='notifications-unread'){state.notificationFilter='unread';state.notificationMenu=false;render()}
     else if(a==='notification-menu'){state.notificationMenu=!state.notificationMenu;render()}
-    else if(a==='mark-all-read'){for(const n of state.notifications.filter(x=>!x.read))await markNotificationRead(n.id);state.notificationMenu=false;showToast('تم تحديد الكل كمقروء');render()}
-    else if(a==='clear-notifications'){state.notifications=[];state.notificationMenu=false;showToast('تم مسح الإشعارات');render()}
+    else if(a==='mark-all-read'){await markAllNotificationsRead();state.notificationMenu=false;showToast('تم تحديد الكل كمقروء');render()}
+    else if(a==='clear-notifications'){state.notifications=[];state.notificationMenu=false;showToast('تم إخفاء الإشعارات من هذه الجلسة');render()}
     else if(a==='open-notification'){const n=state.notifications.find(x=>x.id===act.dataset.id);if(n){await markNotificationRead(n.id);if(n.entity_type==='order'&&n.entity_id){state.selectedOrder=n.entity_id;go('order-details')}else go(n.route||'notifications')}}
     else if(a==='note')showToast('تم حفظ الملاحظة');
     else if(a==='edit-personal'){state.personalEditOpen=true;state.pendingProfileAvatar=null;render()}
@@ -121,10 +117,9 @@ app.addEventListener('click',async e=>{
     else if(a==='edit-phone'){state.phoneEditOpen=true;state.phoneOtpStep='phone';state.pendingPhone='';render()}
     else if(a==='close-phone-edit'){state.phoneEditOpen=false;state.phoneOtpStep='phone';state.pendingPhone='';render()}
     else if(a==='send-phone-otp'){sendPhoneOtp()}
-    else if(a==='resend-phone-otp'){showToast('تمت إعادة إرسال رمز التحقق')}
+    else if(a==='resend-phone-otp'){sendPhoneOtp()}
     else if(a==='phone-back-to-number'){state.phoneOtpStep='phone';render()}
     else if(a==='verify-phone-otp'){verifyPhoneOtp()}
-
     else if(a==='collection-filter'){state.collectionFilter=act.dataset.id||null;state.selectedCategory='الكل';go('category-products')}
     else if(a==='external-banner'){const u=act.dataset.url||'';if(/^https?:\/\//i.test(u))window.open(u,'_blank','noopener,noreferrer')}
     else if(a==='reload-spike-delivery'){try{await loadSpikeCheckoutOptions();render()}catch(err){showToast(err.message||'تعذر تحميل مكاتب التوصيل')}}
@@ -137,27 +132,20 @@ app.addEventListener('click',async e=>{
     else if(a==='offers-rating'){state.offersRating=Number(act.dataset.value);render()}
     else if(a==='reset-offers-filter'){state.offersDiscount=0;state.offersPrice='all';state.offersRating=0;render()}
     else if(a==='apply-offers-filter'){state.offersFilterSheet=false;showToast('تم تطبيق فلتر العروض');render()}
-
     else if(a==='products-sort'){state.productsSortSheet=true;render()}
     else if(a==='close-products-sort'){state.productsSortSheet=false;render()}
-
     else if(a==='stores-category'){state.storesCategory=act.dataset.value;render()}
     else if(a==='stores-filter'){state.storesFilterSheet=true;state.storesSortSheet=false;render()}
     else if(a==='close-stores-filter'){state.storesFilterSheet=false;render()}
     else if(a==='apply-stores-filter'){state.storesFilterSheet=false;showToast('تم تطبيق فلتر المتاجر');render()}
     else if(a==='stores-sort'){state.storesSortSheet=true;state.storesFilterSheet=false;render()}
     else if(a==='close-stores-sort'){state.storesSortSheet=false;render()}
-
     else if(a==='settings-theme'){ensureSettingsDraft();state.settingsDraft.theme=act.dataset.value;previewTheme(state.settingsDraft.theme);render()}
     else if(a==='settings-language'){ensureSettingsDraft();state.settingsDraft.language=act.dataset.value;render()}
     else if(a==='currency-sheet'){ensureSettingsDraft();state.settingsCurrencySheet=true;render()}
     else if(a==='currency-sheet-close'){state.settingsCurrencySheet=false;render()}
     else if(a==='settings-currency'){ensureSettingsDraft();state.settingsDraft.currency=act.dataset.value;state.settingsCurrencySheet=false;render()}
-    else if(a==='save-settings'){ensureSettingsDraft();state.settings={...state.settingsDraft};state.settingsDraft=null;try{localStorage.setItem('storm-settings',JSON.stringify(state.settings))}catch(e){}applySettings();showToast(state.settings.language==='ar'?'تم حفظ التعديلات':'Changes saved');render()}
-    else if(a==='delete-account-open'){state.deleteAccountModal=true;render()}
-    else if(a==='delete-account-close'){state.deleteAccountModal=false;render()}
-    else if(a==='delete-account-confirm'){state.deleteAccountModal=false;state.loggedIn=false;showToast(state.settings.language==='ar'?'تم حذف الحساب التجريبي':'Demo account deleted');go('login')}
-
+    else if(a==='save-settings'){ensureSettingsDraft();state.settings={...state.settingsDraft};state.settingsDraft=null;try{localStorage.setItem('storm-settings',JSON.stringify(state.settings))}catch(e){}applySettings();if(customerToken())try{await SpikeCommerce.req('/cart/meta',{method:'PUT',auth:true,body:{currency_code:state.settings.currency}})}catch(err){console.warn(err)}showToast(state.settings.language==='ar'?'تم حفظ التعديلات':'Changes saved');render()}
     else if(a==='orders-current'){state.ordersTab='current';render()}
     else if(a==='orders-previous'){state.ordersTab='previous';render()}
     else if(a==='orders-filter'){state.ordersFilter=true;render()}
@@ -168,8 +156,7 @@ app.addEventListener('click',async e=>{
     else if(a==='apply-orders-filter'){state.ordersFilter=false;showToast('تم تطبيق الفلتر');render()}
     else if(a==='open-order'){state.selectedOrder=act.dataset.order;go('order-details')}
     else if(a==='invoice')showToast('تم تجهيز الفاتورة');
-    else if(a==='reorder'){const p=products[0];if(p)addToCart(p.id);go('cart')}
-
+    else if(a==='reorder'){const p=products[0];if(p){try{await addRemoteCartItem(p.id,1)}catch(err){showToast(err.message||'تعذر إعادة الطلب');return}}go('cart')}
     else if(a==='open-store'){state.selectedStore=act.dataset.store;state.storeCategory='الكل';state.storeSort='relevance';state.storeProductSearch='';go('store-details')}
     else if(a==='toggle-follow-store'){const id=act.dataset.store;state.followedStores.has(id)?state.followedStores.delete(id):state.followedStores.add(id);showToast(state.followedStores.has(id)?'تمت متابعة المتجر':'تم إلغاء متابعة المتجر');render()}
     else if(a==='store-filter'){state.storeFilter=true;state.storeSortSheet=false;render()}
@@ -200,7 +187,6 @@ function changeCardGallery(gallery,step){
   },70);
 }
 
-// Product-card image gallery: swipe with mouse/finger exactly like a touch gesture.
 let cardSwipe=null;
 app.addEventListener('pointerdown',e=>{
   const gallery=e.target.closest('.card-gallery');
@@ -225,7 +211,6 @@ function finishCardSwipe(e){
   gallery.classList.remove('is-dragging');
   if(moved && Math.abs(dx)>=32){
     gallery.dataset.justSwiped='1';
-    // RTL-friendly physical swipe: drag left reveals next image, drag right reveals previous.
     changeCardGallery(gallery,dx<0?1:-1);
     window.setTimeout(()=>delete gallery.dataset.justSwiped,220);
   }
@@ -234,7 +219,6 @@ function finishCardSwipe(e){
 app.addEventListener('pointerup',finishCardSwipe);
 app.addEventListener('pointercancel',finishCardSwipe);
 
-// Keep trackpad horizontal scrolling as an additional convenience.
 app.addEventListener('wheel',e=>{
   const gallery=e.target.closest('.card-gallery');
   if(!gallery)return;
@@ -243,7 +227,6 @@ app.addEventListener('wheel',e=>{
   changeCardGallery(gallery,(e.deltaX||e.deltaY)>0?1:-1);
 },{passive:false});
 
-// Product-details gallery uses the same mouse/finger swipe gesture as the product cards.
 let detailSwipe=null;
 app.addEventListener('pointerdown',e=>{
   const gallery=e.target.closest('.swipe-detail');
@@ -282,7 +265,6 @@ app.addEventListener('change',e=>{
   if(e.target.id==='profile-image-input'){readProfileImage(e.target.files&&e.target.files[0])}
 });
 
-
 function readProfileImage(file){
   if(!file)return;
   if(!file.type.startsWith('image/')){showToast('اختر ملف صورة');return}
@@ -293,40 +275,40 @@ function readProfileImage(file){
 async function savePersonalProfile(){
   const name=(document.getElementById('profile-name-input')?.value||'').trim();
   if(!name){showToast('أدخل الاسم');return}
-  state.userProfile.name=name;
-  if(state.pendingProfileAvatar)state.userProfile.avatar=state.pendingProfileAvatar;
-  if(customerToken()){
-    const parts=name.split(/\s+/);const first_name=parts.shift()||'',last_name=parts.join(' ');
-    try{await apiRequest('/store/customers/me',{method:'POST',auth:true,body:{first_name,last_name}});await syncCustomer({silent:true})}catch(err){showToast('حُفظ محلياً — تعذر تحديث Mercur')}
-  }
-  state.pendingProfileAvatar=null;state.personalEditOpen=false;showToast('تم تحديث الملف الشخصي');render();
+  try{
+    if(customerToken()){await SpikeCommerce.req('/me',{method:'PUT',auth:true,body:{name}});await syncCustomer({silent:true})}
+    else state.userProfile.name=name;
+    if(state.pendingProfileAvatar)state.userProfile.avatar=state.pendingProfileAvatar;
+    state.pendingProfileAvatar=null;state.personalEditOpen=false;showToast('تم تحديث الملف الشخصي');render();
+  }catch(err){showToast(err.message||'تعذر تحديث الملف الشخصي')}
 }
 
 function sendPhoneOtp(){
-  const phone=(document.getElementById('new-phone-input')?.value||'').trim();
-  const digits=phone.replace(/\D/g,'');
-  if(digits.length<8){showToast('أدخل رقم جوال صحيح');return}
-  state.pendingPhone=phone;
-  state.phoneOtpStep='otp';
-  showToast('تم إرسال رمز التحقق OTP');
-  render();
+  showToast('تغيير رقم الجوال عبر OTP يحتاج ربط مزود رسائل SMS قبل تفعيله');
 }
 function verifyPhoneOtp(){
-  const otp=(document.getElementById('phone-otp-input')?.value||'').replace(/\D/g,'');
-  if(otp.length!==6){showToast('أدخل رمز التحقق المكوّن من 6 أرقام');return}
-  state.userProfile.phone=state.pendingPhone;
-  state.phoneEditOpen=false;
-  state.phoneOtpStep='phone';
-  state.pendingPhone='';
-  showToast('تم تأكيد رقم الجوال الجديد');
-  render();
+  showToast('خدمة التحقق من الجوال غير مفعلة حتى يتم ربط مزود SMS');
 }
 
 async function saveAddressFromForm(){
-  const details=(document.getElementById('address-line1')?.value||'').trim();const line2=(document.getElementById('address-line2')?.value||'').trim();const landmark=(document.getElementById('address-landmark')?.value||'').trim();const phone=(document.getElementById('address-phone')?.value||'').trim();const city=(document.getElementById('address-city')?.value||'').trim();const google_maps_url=(document.getElementById('address-maps')?.value||'').trim();const latitude=Number(document.getElementById('address-lat')?.value),longitude=Number(document.getElementById('address-lng')?.value);if(!details){showToast('أدخل سطر العنوان الأول');return}if(!city){showToast('المدينة مطلوبة');return}if(!Number.isFinite(latitude)||!Number.isFinite(longitude)){showToast('حدد موقعك لحساب أجرة الشحن');return}
-  let addr;if(state.editingAddressId){addr=state.addresses.find(x=>x.id===state.editingAddressId);if(addr)Object.assign(addr,{details,line2,landmark,phone,label:city,latitude,longitude,google_maps_url,type:state.addressFormType})}else{addr={id:'a'+Date.now(),label:city,area:'عنوان جديد',details,line2,landmark,phone,latitude,longitude,google_maps_url,type:state.addressFormType};state.addresses.push(addr)}
-  if(customerToken()){try{await saveRemoteAddress(addr);await syncCustomer({silent:true});addr=state.addresses.find(a=>a.details===details)||addr}catch(err){showToast('حُفظ محلياً — تعذر مزامنة العنوان')}}
-  if(state.addressFormDefault&&addr)state.activeAddress=addr;state.editingAddressId=null;showToast('تم حفظ العنوان');if(state.history[state.history.length-1]==='addresses')state.history.pop();go('addresses',false);
+  if(typeof window.saveRemoteAddress!=='function'){showToast('تعذر تحميل خدمة العناوين');return}
+  if(!customerToken()){showToast('سجّل الدخول أولاً لحفظ العنوان');go('login');return}
+  const old=state.editingAddressId?state.addresses.find(x=>x.id===state.editingAddressId):null;
+  const details=(document.getElementById('address-line1')?.value||'').trim();
+  const line2=(document.getElementById('address-line2')?.value||'').trim();
+  const landmark=(document.getElementById('address-landmark')?.value||'').trim();
+  const city=(document.getElementById('address-city')?.value||'').trim();
+  const maps=(document.getElementById('address-maps')?.value||'').trim();
+  const phone=(document.getElementById('address-phone')?.value||'').trim();
+  if(!details||!city||!phone||!maps){showToast('أكمل العنوان والمدينة والجوال ورابط Google Maps');return}
+  try{
+    const saved=await saveRemoteAddress({...(old||{}),id:old?.id,label:city,details:[details,line2,landmark].filter(Boolean).join(' - '),phone,type:state.addressFormType||'home',google_maps_url:maps});
+    state.editingAddressId=null;
+    await syncCustomer({silent:true});
+    state.activeAddress=state.addresses.find(x=>x.id===saved?.id)||state.activeAddress;
+    showToast('تم حفظ العنوان وتحديد الموقع تلقائيًا');
+    go('addresses',false);
+  }catch(err){showToast(err.message||'تعذر حفظ العنوان')}
 }
 
 function ensureSettingsDraft(){
@@ -348,7 +330,10 @@ window.addEventListener('mousemove',e=>{if(!dragState)return;const dx=e.pageX-dr
 window.addEventListener('mouseup',()=>{if(!dragState)return;dragState.el.classList.remove('dragging');dragState=null});
 
 render();
-// Load live Mercur data on startup. No demo catalog is used.
-syncMercurAll({silent:true});
-
-// Typography policy handled by CSS (.font-12-medium) — no DOM-wide MutationObserver.
+refreshSpikeCatalog().catch(err=>console.warn('Spike startup',err));
+if(customerToken()){
+  syncCustomer({silent:true}).catch(()=>{});
+  syncRemoteCart({silent:true}).catch(()=>{});
+  syncOrders({silent:true}).catch(()=>{});
+  syncNotifications({silent:true}).catch(()=>{});
+}
