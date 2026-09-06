@@ -6,8 +6,8 @@
     const v=String(src||'').trim();
     if(!v)return '';
     if(/^https?:\/\//i.test(v))return v;
-    if(v.startsWith('/uploads/'))return HOST+v;
-    if(v.startsWith('uploads/'))return HOST+'/'+v;
+    if(v.startsWith('/uploads/'))return API+v;
+    if(v.startsWith('uploads/'))return API+'/'+v;
     if(v.startsWith('/assets/'))return v.slice(1);
     if(v.startsWith('assets/assets/'))return v;
     if(v.startsWith('assets/'))return 'assets/'+v;
