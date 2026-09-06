@@ -5,10 +5,10 @@ function offerPrices(p){
 }
 function offerDiscountPercent(p){
   const {current,original}=offerPrices(p);
-  if(!original||!current||original<=current)return 0;
-  return Math.round(((original-current)/original)*100);
+  if(original&&current&&original>current)return Math.round(((original-current)/original)*100);
+  return Math.max(0,Number(p?.discountPercent||p?.raw?.discount_percent||0));
 }
-function offerSignature(p){const {current,original}=offerPrices(p);return `${p.id}:${original}:${current}`}
+function offerSignature(p){const {current,original}=offerPrices(p);return `${p.id}:${original}:${current}:${offerDiscountPercent(p)}`}
 function unseenOfferSignatures(){const current=spikeDiscountProducts().map(offerSignature);try{const seen=new Set(JSON.parse(localStorage.getItem('spike-offers-seen-signatures')||'[]'));return new Set(current.filter(x=>!seen.has(x)))}catch(_){return new Set(current)}}
 function markCurrentOffersSeen(){try{localStorage.setItem('spike-offers-seen-signatures',JSON.stringify(spikeDiscountProducts().map(offerSignature)))}catch(_){}}
 window.markCurrentOffersSeen=markCurrentOffersSeen;
