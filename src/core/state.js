@@ -4,7 +4,7 @@ const toast=document.getElementById('toast');
 
 let state={
   route:'home', backend:{status:'loading',message:'جاري الاتصال بـ Spike'}, history:[], loggedIn:false,
-  favs:new Set(), filter:false, offersFilterSheet:false, offersDiscount:0, offersPrice:'all', offersRating:0,
+  favs:new Set(), filter:false, offersFilterSheet:false, offersDiscount:0, offersPrice:'all', offersRating:0, offersSort:'discount_desc',
   payment:'transfer', couponCode:'', appliedCoupon:'', paymentReceipt:null, receiptUpload:null, notificationFilter:'all', notificationMenu:false,
   settings:{theme:'light',language:'ar',currency:'USD'}, settingsDraft:null, settingsCurrencySheet:false,
   deleteAccountModal:false, currencySheet:false, activeAddress:null, editingAddressId:null,
