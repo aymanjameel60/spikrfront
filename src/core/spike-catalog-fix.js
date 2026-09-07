@@ -1,15 +1,17 @@
 /* Spike catalog coordinator: one product/store loader plus category sync. */
 (function(){
   const API='https://spike2.aymanjameel60.deno.net/api/v1';
+  const SUPABASE_PUBLIC='https://oshdiaifvwfdbkatagex.supabase.co/storage/v1/object/public/spike-images/legacy/';
   const oldAbsolute=window.absoluteProductImage;
   const PLACEHOLDER='assets/assets/placeholder-product.svg';
 
   function fixText(value){const s=String(value||'');if(!/[ØÙ]/.test(s))return s;try{const bytes=Uint8Array.from([...s].map(ch=>ch.charCodeAt(0)&255));return new TextDecoder('utf-8').decode(bytes)}catch{return s}}
-  function abs(src){const v=String(src||'').trim();if(!v)return PLACEHOLDER;if(/^https?:\/\//i.test(v))return v;if(v.startsWith('/uploads/'))return 'https://spike2.aymanjameel60.deno.net'+v;if(v.startsWith('uploads/'))return 'https://spike2.aymanjameel60.deno.net/'+v;if(v.startsWith('/assets/'))return v.slice(1);if(v.startsWith('assets/assets/'))return v;if(v.startsWith('assets/'))return 'assets/'+v;return oldAbsolute?oldAbsolute(v):v}
+  function abs(src){const v=String(src||'').trim();if(!v)return PLACEHOLDER;if(/^https?:\/\//i.test(v))return v;const m=v.match(/^\/?uploads\/([^/?#]+)$/i);if(m)return SUPABASE_PUBLIC+encodeURIComponent(m[1]);if(v.startsWith('/assets/'))return v.slice(1);if(v.startsWith('assets/assets/'))return v;if(v.startsWith('assets/'))return 'assets/'+v;return oldAbsolute?oldAbsolute(v):v}
   window.absoluteProductImage=abs;
 
   async function json(path){
-    const r=await fetch(API+path,{headers:{accept:'application/json'},cache:'no-store'});
+    const sep=path.includes('?')?'&':'?';
+    const r=await fetch(API+path+sep+'_='+Date.now(),{headers:{accept:'application/json','cache-control':'no-cache'},cache:'no-store'});
     if(!r.ok)throw new Error(`${path} HTTP_${r.status}`);
     return r.json();
   }
@@ -48,8 +50,8 @@
   window.refreshSpikeCategories=syncCategories;
   window.refreshSpikeCatalog=load;
 
-  /* Run category sync independently too, so a failure in another catalog request never hides categories. */
   queueMicrotask(()=>syncCategories());
   window.addEventListener('DOMContentLoaded',()=>syncCategories(),{once:true});
-  window.setTimeout(()=>{if(!(state.liveCategories||[]).length)syncCategories()},700);
+  window.setTimeout(()=>syncCategories(),700);
+  window.setTimeout(()=>syncCategories(),1800);
 })();
