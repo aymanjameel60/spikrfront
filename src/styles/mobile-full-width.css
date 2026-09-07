@@ -1,12 +1,12 @@
-/* Mobile storefront must use the full device width. */
-html,body{width:100%;min-width:0;max-width:none;background:var(--bg);overflow-x:hidden}
-body{display:block}
-.phone-shell{width:100%;max-width:none;margin:0;min-height:100dvh}
-.bottom-nav{left:0;right:0;width:100%;max-width:none;margin:0}
-.filter-sheet{width:100%;max-width:none}
-.settings-bottom-sheet{width:100%!important;max-width:none!important}
-@media(min-width:600px){
-  body{display:flex;justify-content:center;background:#ddd}
-  .phone-shell{width:430px;max-width:430px}
-  .bottom-nav,.filter-sheet,.settings-bottom-sheet{width:430px;max-width:430px;left:50%;right:auto;transform:translateX(-50%)}
-}
+/* Full-width responsive mobile/WebView layout: never letterbox the app on phones. */
+html{width:100%;min-width:0;max-width:none;margin:0;padding:0;background:var(--bg);overflow-x:hidden;-webkit-text-size-adjust:100%}
+body{width:100%;min-width:0;max-width:none;margin:0;padding:0;background:var(--bg);overflow-x:hidden;display:block}
+*,*::before,*::after{box-sizing:border-box;max-width:100%}
+img,svg,video,canvas{max-width:100%;height:auto}
+.phone-shell{position:relative;width:100%;min-width:0;max-width:none!important;margin:0!important;min-height:100vh;min-height:100dvh;overflow-x:hidden;background:var(--bg)}
+.screen,.page,.page-wrap,.home,.content{max-width:none}
+.bottom-nav{left:0!important;right:0!important;width:100%!important;max-width:none!important;margin:0!important;transform:none!important;padding-left:max(10px,env(safe-area-inset-left));padding-right:max(10px,env(safe-area-inset-right));padding-bottom:max(8px,env(safe-area-inset-bottom))}
+.filter-sheet,.settings-bottom-sheet{left:0!important;right:0!important;width:100%!important;max-width:none!important;margin:0!important;transform:none!important;padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}
+@supports(padding:max(0px)){body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}.phone-shell{width:100%}}
+/* Desktop preview may stay centered, but the app itself keeps a phone-like canvas only on real desktop widths. */
+@media(min-width:900px){body{display:flex;justify-content:center;background:#ddd;padding-left:0;padding-right:0}.phone-shell{width:min(430px,100vw);max-width:430px!important}.bottom-nav,.filter-sheet,.settings-bottom-sheet{width:min(430px,100vw)!important;max-width:430px!important;left:50%!important;right:auto!important;transform:translateX(-50%)!important}}
