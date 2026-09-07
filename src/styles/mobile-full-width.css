@@ -1,0 +1,12 @@
+/* Mobile storefront must use the full device width. */
+html,body{width:100%;min-width:0;max-width:none;background:var(--bg);overflow-x:hidden}
+body{display:block}
+.phone-shell{width:100%;max-width:none;margin:0;min-height:100dvh}
+.bottom-nav{left:0;right:0;width:100%;max-width:none;margin:0}
+.filter-sheet{width:100%;max-width:none}
+.settings-bottom-sheet{width:100%!important;max-width:none!important}
+@media(min-width:600px){
+  body{display:flex;justify-content:center;background:#ddd}
+  .phone-shell{width:430px;max-width:430px}
+  .bottom-nav,.filter-sheet,.settings-bottom-sheet{width:430px;max-width:430px;left:50%;right:auto;transform:translateX(-50%)}
+}
