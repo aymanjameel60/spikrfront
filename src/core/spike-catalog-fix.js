@@ -1,8 +1,8 @@
 /* Spike catalog coordinator: one product/store loader plus category sync. */
 (function(){
-  const API='http://localhost:9100/api/v1';
+  const API='https://spike2.aymanjameel60.deno.net/api/v1';
   const oldAbsolute=window.absoluteProductImage;
-  function abs(src){const v=String(src||'').trim();if(!v)return '';if(/^https?:\/\//i.test(v))return v;if(v.startsWith('/uploads/'))return API+v;if(v.startsWith('uploads/'))return API+'/'+v;if(v.startsWith('/assets/'))return v.slice(1);if(v.startsWith('assets/assets/'))return v;if(v.startsWith('assets/'))return 'assets/'+v;return oldAbsolute?oldAbsolute(v):v}
+  function abs(src){const v=String(src||'').trim();if(!v)return '';if(/^https?:\/\//i.test(v))return v;if(v.startsWith('/uploads/'))return 'https://spike2.aymanjameel60.deno.net'+v;if(v.startsWith('uploads/'))return 'https://spike2.aymanjameel60.deno.net/'+v;if(v.startsWith('/assets/'))return v.slice(1);if(v.startsWith('assets/assets/'))return v;if(v.startsWith('assets/'))return 'assets/'+v;return oldAbsolute?oldAbsolute(v):v}
   window.absoluteProductImage=abs;
   async function json(path){const r=await fetch(API+path,{headers:{accept:'application/json'},cache:'no-store'});if(!r.ok)throw new Error(`${path} HTTP_${r.status}`);return r.json()}
   function category(c){return {...c,id:c.id,name:c.name||c.title||'قسم',image_url:abs(c.image_url||c.image||c.thumbnail),enabled:c.enabled!==false}}
